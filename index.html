@@ -405,8 +405,8 @@ header {
 .btn-analyze:hover { background: var(--accentH); transform: translateY(-1px); }
 .btn-analyze:disabled { background: var(--card2); color: var(--muted); border: 1px solid var(--border); box-shadow: none; cursor: not-allowed; transform: none; }
 .spinner-inline {
-  width: 16px; height: 16px; min-width: 16px; border: 2px solid rgba(0,0,0,0.2);
-  border-top-color: #000; border-radius: 50%; flex-shrink: 0; display: inline-block;
+  width: 18px; height: 18px; border: 2px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%;
 }
 .error-box {
   background: var(--redBg); border: 1px solid var(--redBd);
@@ -523,8 +523,7 @@ input[type=number]::-webkit-outer-spin-button { opacity: 0.4; }
   background: var(--green); box-shadow: 0 0 8px var(--green);
 }
 .status-text { font-size: 13px; font-weight: 700; color: var(--green); }
-.result-tabs { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-.result-tabs::-webkit-scrollbar { display: none; }
+.result-tabs { display: flex; gap: 0; }
 .result-tab {
   border: none; background: none;
   padding: 10px 18px; font-size: 13px; font-weight: 600;
@@ -929,7 +928,9 @@ footer {
         <button class="lang-btn active" id="lang-pt" onclick="setLang('pt')">PT</button>
         <button class="lang-btn"        id="lang-en" onclick="setLang('en')">EN</button>
       </div>
-
+      <button class="btn-subscribe-hdr" onclick="navigate('builder')">
+        <span data-pt="Começar grátis" data-en="Start free">Começar grátis</span>
+      </button>
     </div>
   </div>
 
@@ -1207,7 +1208,7 @@ footer {
         </div>
 
         <button class="btn-analyze btn-analyze-mobile" onclick="analyzeDeck()">
-          <span id="btn-analyze-text-mobile">⚡ Analisar meu deck</span>
+          <span>⚡ Analisar meu deck</span>
         </button>
         <div class="tip-card">
           <p class="tip-title">💡 <span data-pt="Dica" data-en="Tip">Dica</span></p>
@@ -1761,21 +1762,16 @@ function setBudget(b) {
 function updateBuilderText() {
   const ti = document.getElementById('input-panel-title');
   const ba = document.getElementById('btn-analyze-text');
-  const bam = document.getElementById('btn-analyze-text-mobile');
-  const improveText = t('⚡ Analisar meu deck', '⚡ Analyze my deck');
-  const createText  = t('✦ Criar deck otimizado', '✦ Create optimized deck');
   if (intent === 'improve') {
     ti.textContent = t('📋 Sua lista de deck', '📋 Your deck list');
-    ba.textContent = improveText;
-    if (bam) bam.textContent = improveText;
+    ba.textContent = t('⚡ Analisar meu deck', '⚡ Analyze my deck');
     document.getElementById('deck-input').placeholder = t(
       'Cole sua lista de deck aqui...\n\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy\n3x Arven...',
       'Paste your deck list here...\n\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy...'
     );
   } else {
     ti.textContent = t('✦ Descreva seu deck', '✦ Describe your deck');
-    ba.textContent = createText;
-    if (bam) bam.textContent = createText;
+    ba.textContent = t('✦ Criar deck otimizado', '✦ Create optimized deck');
     document.getElementById('deck-input').placeholder = t(
       'Descreva o que você quer...\n\nEx: Quero um deck agressivo de fogo com Charizard. Tenho Charmander x4 e Rare Candy x3. Orçamento de R$100.',
       'Describe what you want...\n\nEx: I want an aggressive fire deck with Charizard. Budget R$100.'
@@ -1815,90 +1811,42 @@ async function analyzeDeck() {
 
   const isCreate = intent === 'create';
 
-  const promptImprove = `You are a Pokemon TCG coach. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
-{"score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":""},"weaknesses":["","",""],"improvements":{"remove":[{"card":"","qty":0,"reason":""}],"add":[{"card":"","qty":0,"reason":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
-DECK: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
+  const promptImprove = `You are a world-class Pokémon TCG coach. Analyze and improve this existing deck.
+DECK LIST: ${deckInput}
+PLAY STYLE: ${styleMap[style]}
+BUDGET: ${budgetMap[budget]}
+Respond ONLY with valid JSON (no markdown, no extra text):
+{"score":{"consistency":<0-100>,"aggression":<0-100>,"difficulty":<0-100>},"strategy":{"how_it_works":"<PT>","main_combo":"<PT>","common_mistakes":"<PT>"},"weaknesses":["<PT>","<PT>","<PT>"],"improvements":{"remove":[{"card":"<name>","qty":<n>,"reason":"<PT>"}],"add":[{"card":"<name>","qty":<n>,"reason":"<PT>"}]},"upgrades":[{"card":"<name>","priority":"Alta","impact":"<PT>"},{"card":"<name>","priority":"Média","impact":"<PT>"},{"card":"<name>","priority":"Baixa","impact":"<PT>"}]}`;
 
-  const promptCreate = `You are a Pokemon TCG deck builder. Build a 60-card Standard deck. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
-{"deck_name":"","score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":""},"weaknesses":["","",""],"deck_list":{"pokemon":[{"qty":0,"name":""}],"trainers":[{"qty":0,"name":""}],"energy":[{"qty":0,"name":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
-RULES: Exactly 60 cards total. Max 4 copies. SV Standard only. Include Iono x4, Ultra Ball x4, Nest Ball x4.
-REQUEST: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
+  const promptCreate = `You are a world-class Pokémon TCG deck builder. Build a COMPLETE, READY-TO-PLAY 60-card Standard format deck.
 
-  const GEMINI_KEY = 'AIzaSyAStokAqjnYFzP8wOaRFfOZ8XjshT6FntU';
+USER DESCRIPTION: ${deckInput}
+PLAY STYLE: ${styleMap[style]}
+BUDGET: ${budgetMap[budget]}
+
+CRITICAL RULES — FOLLOW EXACTLY:
+1. The deck MUST contain EXACTLY 60 cards. Not 59, not 61. Exactly 60.
+2. Before responding, verify: sum of ALL qty values in pokemon + trainers + energy = 60.
+3. Maximum 4 copies of any card (except Basic Energy).
+4. Only Standard format legal cards (Scarlet and Violet era).
+5. Always include: Iono x3-4, Professor Research x2-3, Boss Orders x2-3, Ultra Ball x4, Nest Ball x4, and 8-14 energy.
+6. Include any specific cards the user mentioned. Fill the rest with competitive staples.
+7. DO NOT respond until you have verified the total equals exactly 60.
+
+Respond ONLY with valid JSON (no markdown, no extra text):
+{"deck_name":"<name in PT>","score":{"consistency":<0-100>,"aggression":<0-100>,"difficulty":<0-100>},"strategy":{"how_it_works":"<PT>","main_combo":"<PT>","common_mistakes":"<PT>"},"weaknesses":["<PT>","<PT>","<PT>"],"deck_list":{"pokemon":[{"qty":<n>,"name":"<card name>"}],"trainers":[{"qty":<n>,"name":"<card name>"}],"energy":[{"qty":<n>,"name":"<card name>"}]},"upgrades":[{"card":"<n>","priority":"Alta","impact":"<PT>"},{"card":"<n>","priority":"Média","impact":"<PT>"},{"card":"<n>","priority":"Baixa","impact":"<PT>"}]}`;
 
   try {
-    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_KEY}`);
-    const listData = await listRes.json();
-    if (!listRes.ok) throw new Error(listData.error?.message || 'API error');
-    const available = (listData.models || [])
-      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-      .map(m => m.name.replace('models/', ''));
-    const preferred = ['flash', 'pro'];
-    let chosen = available[0];
-    for (const pref of preferred) {
-      const found = available.find(m => m.includes(pref));
-      if (found) { chosen = found; break; }
-    }
-    if (!chosen) throw new Error('Nenhum modelo disponível.');
-
-    // Build ordered list: chosen first, then others as fallback
-    const modelQueue = [chosen, ...available.filter(m => m !== chosen)].slice(0, 3);
-    const prompt = isCreate ? promptCreate : promptImprove;
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-    function repairJson(str) {
-      try { JSON.parse(str); return str; } catch {}
-      let s = str.trimEnd().replace(/,\s*"[^"]*$/, '').replace(/,\s*$/, '');
-      const opens = []; let inStr = false, esc = false;
-      for (const ch of s) {
-        if (esc) { esc = false; continue; }
-        if (ch === '\\') { esc = true; continue; }
-        if (ch === '"') { inStr = !inStr; continue; }
-        if (inStr) continue;
-        if (ch === '{') opens.push('}');
-        else if (ch === '[') opens.push(']');
-        else if (ch === '}' || ch === ']') opens.pop();
-      }
-      return s + opens.reverse().join('');
-    }
-
-    let lastErr = null;
-    for (const model of modelQueue) {
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
-            })
-          });
-          const data = await res.json();
-          const errMsg = data.error?.message || '';
-          // If overloaded, wait and retry same model
-          if (errMsg.toLowerCase().includes('high demand') || errMsg.toLowerCase().includes('overload') || res.status === 503) {
-            lastErr = errMsg;
-            const wait = attempt * 4000;
-            setRetryText(`⏳ Tentativa ${attempt}/3…`);
-            await sleep(wait);
-            continue;
-          }
-          if (!res.ok || data.error) throw new Error(errMsg || 'Gemini error');
-          let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          text = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim();
-          analysisResult = JSON.parse(repairJson(text));
-          lastErr = null;
-          break; // success
-        } catch (e) {
-          lastErr = e.message;
-          if (attempt < 3) await sleep(attempt * 3000);
-        }
-      }
-      if (!lastErr) break; // success, stop trying models
-    }
-    if (lastErr) throw new Error(lastErr);
+    const res = await fetch('/.netlify/functions/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: isCreate ? promptCreate : promptImprove })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.text || '';
+    const cleaned = text.replace(/```json[\s\S]*?```|```[\s\S]*?```/g, m => m.replace(/```json|```/g, '')).trim();
+    analysisResult = JSON.parse(cleaned);
   } catch (err) {
     setAnalyzing(false);
     console.error('API error:', err);
@@ -1978,23 +1926,15 @@ function getMockResult() {
 }
 
 function setAnalyzing(v) {
-  const txt  = document.getElementById('btn-analyze-text');
-  const txtM = document.getElementById('btn-analyze-text-mobile');
-  document.querySelectorAll('.btn-analyze').forEach(btn => btn.disabled = v);
-  const spinnerHtml = `<span style="display:flex;align-items:center;gap:8px;justify-content:center"><div class="spinner-inline spin"></div>${t('Analisando…','Analyzing…')}</span>`;
+  const btnDesktop = document.getElementById('btn-analyze-desktop');
+  const txt = document.getElementById('btn-analyze-text');
+  const allBtns = document.querySelectorAll('.btn-analyze');
+  allBtns.forEach(btn => btn.disabled = v);
   if (v) {
-    txt.innerHTML  = spinnerHtml;
-    if (txtM) txtM.innerHTML = spinnerHtml;
+    txt.innerHTML = `<div class="spinner-inline spin"></div> ${t('Analisando seu deck…','Analyzing your deck…')}`;
   } else {
     updateBuilderText();
   }
-}
-
-function setRetryText(msg) {
-  const txt  = document.getElementById('btn-analyze-text');
-  const txtM = document.getElementById('btn-analyze-text-mobile');
-  if (txt)  txt.textContent  = msg;
-  if (txtM) txtM.textContent = msg;
 }
 
 function showError(msg) {
@@ -2122,9 +2062,8 @@ function renderAnalysis(r, isCreate) {
       totalPokemon  = dl.pokemon.reduce((a,c)=>a+c.qty,0);
       totalTrainers = dl.trainers.reduce((a,c)=>a+c.qty,0);
       totalEnergy   = dl.energy.reduce((a,c)=>a+c.qty,0);
+      total = totalPokemon + totalTrainers + totalEnergy;
     }
-    total = totalPokemon + totalTrainers + totalEnergy;
-    const totalColor = total === 60 ? 'var(--green)' : total > 60 ? 'var(--red)' : 'var(--orange)';
 
     // Build plain text list for copy
     const plainList = [
@@ -2150,8 +2089,8 @@ function renderAnalysis(r, isCreate) {
   }
 
   // Upgrades
-  const priorityClass = p => p==='Alta'?'priority-high':(p==='Média'||p==='Media')?'priority-medium':'priority-low';
-  const priorityIcon  = p => p==='Alta'?'🔴':(p==='Média'||p==='Media')?'🟡':'🟢';
+  const priorityClass = p => p==='Alta'?'priority-high':p==='Média'?'priority-medium':'priority-low';
+  const priorityIcon  = p => p==='Alta'?'🔴':p==='Média'?'🟡':'🟢';
   document.getElementById('upgrade-list').innerHTML = r.upgrades.map(u => `
     <div class="upgrade-item">
       <div class="upgrade-gem">${priorityIcon(u.priority)}</div>
@@ -2208,7 +2147,7 @@ function setResultTab(tab) {
   document.querySelectorAll('.result-tab').forEach((b,i) => {
     b.classList.toggle('active', b.getAttribute('onclick') === `setResultTab('${tab}')`);
   });
-  ['analysis','optimize','upgrade','decklist','cards'].forEach(id => {
+  ['analysis','optimize','upgrade','decklist'].forEach(id => {
     const el = document.getElementById('tab-' + id);
     if (el) el.classList.toggle('active', id === tab);
   });
