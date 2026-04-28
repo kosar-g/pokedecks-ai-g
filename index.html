@@ -1849,7 +1849,7 @@ REQUEST: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}
 
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const res = await fetch('/.netlify/functions/gemini', {
+        const res = await fetch(`${window.location.origin}/.netlify/functions/gemini`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt })
