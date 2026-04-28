@@ -826,6 +826,22 @@ footer {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   cursor: pointer; position: relative;
 }
+.card-remove-btn {
+  position: absolute; top: -8px; right: -8px; z-index: 3;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #ef4444; color: #fff; border: none;
+  font-size: 15px; font-weight: 900; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: transform 0.15s;
+}
+.card-remove-btn:hover { transform: scale(1.2); }
+.card-expand-btn {
+  width: 100%;
+  background: var(--card3); border: 1px solid var(--border);
+  color: var(--muted); border-radius: 6px; padding: 3px 0;
+  font-size: 13px; cursor: pointer; transition: all 0.15s; line-height: 1;
+}
+.card-expand-btn:hover { background: var(--accentBg); color: var(--accent); border-color: var(--accent); }
 .card-img-wrap {
   width: 100%; aspect-ratio: 2.5/3.5;
   border-radius: 8px; overflow: hidden;
@@ -2250,28 +2266,43 @@ async function doSearchCards(query) {
     <span style="font-size:12px">Buscando cartas…</span>
   </div>`;
   try {
-    const q = query.trim().replace(/\s+/g, '+');
-    const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:${q}*&pageSize=24`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (!data.data || !data.data.length) {
+    const base = query.trim();
+    // Remove common suffixes for better matching
+    const stripped = base.replace(/\s+(ex|v|vmax|vstar|gx)$/i, '').trim();
+    const firstWord = stripped.split(' ')[0];
+
+    // Try strategies in order
+    const strategies = [
+      `name:"${base}"`,
+      `name:"${stripped}"`,
+      `name:${firstWord}*`,
+    ];
+
+    let cards = [];
+    for (const q of strategies) {
+      const res = await fetch(
+        `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=24&orderBy=-set.releaseDate`,
+        { headers: { 'Accept': 'application/json' } }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.data && data.data.length > 0) {
+        cards = data.data;
+        break;
+      }
+    }
+
+    if (!cards.length) {
       el.innerHTML = `<p style="font-size:12px;color:var(--muted);text-align:center;padding:16px">Nenhuma carta encontrada para "<strong>${query}</strong>".<br><span style="font-size:11px">Tente um nome diferente.</span></p>`;
       return;
     }
-    renderSearchResults(data.data);
+    renderSearchResults(cards);
   } catch(err) {
     console.error('pokemontcg search error:', err);
-    const isBlocked = err instanceof TypeError;
     el.innerHTML = `
       <div style="text-align:center;padding:16px">
-        <p style="font-size:12px;color:var(--red);margin-bottom:8px">
-          ${isBlocked
-            ? '⚠️ API bloqueada neste ambiente.<br><span style="font-size:11px;color:var(--muted)">Cole sua lista manualmente no textarea acima — a busca funciona normalmente no browser.</span>'
-            : 'Erro ao buscar. Tente novamente.'}
-        </p>
-        ${isBlocked ? `<button onclick="doSearchCards('${query.replace(/'/g,"\\'")}') " style="font-size:11px;background:var(--accentBg);border:1px solid var(--borderA);color:var(--accent);border-radius:7px;padding:5px 12px;cursor:pointer">↺ Tentar novamente</button>` : ''}
+        <p style="font-size:12px;color:var(--red);margin-bottom:8px">Erro ao buscar. Tente novamente.</p>
+        <button onclick="doSearchCards('${query.replace(/'/g,"\\'")}') " style="font-size:11px;background:var(--accentBg);border:1px solid var(--borderA);color:var(--accent);border-radius:7px;padding:5px 12px;cursor:pointer">↺ Tentar novamente</button>
       </div>`;
   }
 }
@@ -2602,13 +2633,24 @@ async function renderCardsGridView() {
   grid.innerHTML = `<div class="card-img-grid">
     ${parsedDeck.map((c,i) => `
       <div class="card-img-item" id="card-cell-${i}">
+        <button class="card-remove-btn" onclick="removeCardFromParsed(${i})" title="Remover 1x">−</button>
         <div class="card-img-wrap">
           <div class="card-img-placeholder"><span style="font-size:22px">🃏</span><span>${c.name}</span></div>
           <span class="card-img-qty">${c.qty}x</span>
         </div>
+        <button class="card-expand-btn" onclick="expandCard(${i})" title="Ampliar carta">⛶</button>
         <span class="card-img-name">${c.name}</span>
       </div>`).join('')}
+  </div>
+  <!-- Card modal -->
+  <div id="card-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center" onclick="closeCardModal()">
+    <div style="position:relative;max-width:340px;width:90%" onclick="event.stopPropagation()">
+      <img id="card-modal-img" src="" style="width:100%;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+      <p id="card-modal-name" style="text-align:center;color:#fff;font-weight:700;margin-top:10px;font-size:14px"></p>
+      <button onclick="closeCardModal()" style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;background:var(--card3);border:1px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
   </div>`;
+
   // Fetch in batches of 6
   for (let i = 0; i < parsedDeck.length; i += 6) {
     await Promise.all(parsedDeck.slice(i, i+6).map(async (c, j) => {
@@ -2616,6 +2658,7 @@ async function renderCardsGridView() {
       const img = await fetchCardImage(c.name);
       const cell = document.getElementById(`card-cell-${idx}`);
       if (!cell) return;
+      cell.dataset.img = img || '';
       const wrap = cell.querySelector('.card-img-wrap');
       const qtyBadge = `<span class="card-img-qty">${c.qty}x</span>`;
       if (img) {
@@ -2626,6 +2669,39 @@ async function renderCardsGridView() {
       }
     }));
   }
+}
+
+function removeCardFromParsed(idx) {
+  if (!parsedDeck[idx]) return;
+  if (parsedDeck[idx].qty > 1) {
+    parsedDeck[idx].qty--;
+  } else {
+    parsedDeck.splice(idx, 1);
+  }
+  // Update textarea
+  const lines = parsedDeck.map(c => `${c.qty}x ${c.name}`).join('\n');
+  const ta = document.getElementById('deck-input');
+  if (ta) { ta.value = lines; onDeckInput(lines); autoGrow(ta); }
+  renderCardsListView();
+  renderCardsGridView();
+}
+
+function expandCard(idx) {
+  const cell = document.getElementById(`card-cell-${idx}`);
+  if (!cell) return;
+  const img = cell.dataset.img;
+  const name = parsedDeck[idx]?.name || '';
+  const modal = document.getElementById('card-modal');
+  if (!modal) return;
+  document.getElementById('card-modal-img').src = img || '';
+  document.getElementById('card-modal-img').style.display = img ? 'block' : 'none';
+  document.getElementById('card-modal-name').textContent = name;
+  modal.style.display = 'flex';
+}
+
+function closeCardModal() {
+  const modal = document.getElementById('card-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 function setCardsView(view) {
