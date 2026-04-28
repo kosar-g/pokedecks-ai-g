@@ -1817,19 +1817,19 @@ async function analyzeDeck() {
   const isCreate = intent === 'create';
 
   const promptImprove = `You are a Pokemon TCG competitive coach. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
-SCORE RULES (integers 0-100, be accurate for competitive play):
-- consistency: how reliably the deck sets up its strategy each game (draw power, search, recovery)
-- aggression: how fast and hard it attacks (damage output, prize race speed)  
-- difficulty: skill required to pilot optimally (1=very easy, 100=very hard)
-A top meta deck should score 75-95 in its strong areas. Be realistic, not conservative.
+SCORE RULES (integers 0-100):
+- consistency: setup reliability. Examples: Charizard ex=88, Dragapult ex=82, Gardevoir ex=90, budget rogue=45
+- aggression: attack speed/damage. Examples: Regidrago VSTAR=95, Dragapult ex=85, Gardevoir ex=60, stall=10
+- difficulty: pilot skill needed. Examples: Gardevoir ex=88, Dragapult ex=75, Charizard ex=55, basic beatdown=20
+Score the submitted deck honestly relative to these benchmarks. Do NOT score below 50 for any meta deck.
 {"score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":""},"weaknesses":["","",""],"improvements":{"remove":[{"card":"","qty":0,"reason":""}],"add":[{"card":"","qty":0,"reason":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
 DECK: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
 
   const promptCreate = `You are a Pokemon TCG competitive deck builder. Build a 60-card Standard deck. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
-SCORE RULES (integers 0-100, be accurate for competitive play):
-- consistency: how reliably the deck sets up (draw power, search, recovery)
-- aggression: how fast and hard it attacks (damage output, prize race speed)
-- difficulty: skill required to pilot optimally (1=very easy, 100=very hard)
+SCORE RULES (integers 0-100):
+- consistency: setup reliability. Examples: Charizard ex=88, Dragapult ex=82, Gardevoir ex=90, budget rogue=45
+- aggression: attack speed/damage. Examples: Regidrago VSTAR=95, Dragapult ex=85, Gardevoir ex=60, stall=10
+- difficulty: pilot skill needed. Examples: Gardevoir ex=88, Dragapult ex=75, Charizard ex=55, basic beatdown=20
 {"deck_name":"","score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":""},"weaknesses":["","",""],"deck_list":{"pokemon":[{"qty":0,"name":""}],"trainers":[{"qty":0,"name":""}],"energy":[{"qty":0,"name":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
 RULES: Exactly 60 cards total. Max 4 copies. SV Standard only. Include Iono x4, Ultra Ball x4, Nest Ball x4.
 REQUEST: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
@@ -2520,14 +2520,35 @@ function parseDeckInput(raw) {
 async function fetchCardImage(name) {
   if (cardImgCache[name] !== undefined) return cardImgCache[name];
   try {
-    const query = name.replace(/\s+/g, '+');
-    const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:${query}&pageSize=4`);
-    const data = await res.json();
-    if (data.data && data.data.length > 0) {
-      const sorted = data.data.sort((a,b) => (b.set?.releaseDate||'').localeCompare(a.set?.releaseDate||''));
-      const img = sorted[0].images?.small || null;
-      cardImgCache[name] = img;
-      return img;
+    // Try exact name first, then base name without suffix
+    const tries = [name];
+    const baseName = name.replace(/\s+(ex|v|vmax|vstar|gx|ex|tera)$/i, '').trim();
+    if (baseName !== name) tries.push(baseName);
+
+    for (const attempt of tries) {
+      const query = encodeURIComponent(`name:"${attempt}"`);
+      const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=${query}&pageSize=8&orderBy=-set.releaseDate`);
+      const data = await res.json();
+      if (data.data && data.data.length > 0) {
+        // Prefer SV era cards (sv prefix in set id)
+        const svCard = data.data.find(c => c.set?.id?.startsWith('sv'));
+        const img = (svCard || data.data[0]).images?.small || null;
+        cardImgCache[name] = img;
+        return img;
+      }
+    }
+
+    // Fallback: wildcard search on first word
+    const firstWord = name.split(' ')[0];
+    const q2 = encodeURIComponent(`name:${firstWord}*`);
+    const res2 = await fetch(`https://api.pokemontcg.io/v2/cards?q=${q2}&pageSize=8&orderBy=-set.releaseDate`);
+    const data2 = await res2.json();
+    if (data2.data && data2.data.length > 0) {
+      // Find best match by name similarity
+      const match = data2.data.find(c => c.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]))
+        || data2.data[0];
+      cardImgCache[name] = match.images?.small || null;
+      return cardImgCache[name];
     }
   } catch {}
   cardImgCache[name] = null;
