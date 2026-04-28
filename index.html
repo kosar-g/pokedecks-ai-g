@@ -1816,11 +1816,20 @@ async function analyzeDeck() {
 
   const isCreate = intent === 'create';
 
-  const promptImprove = `You are a Pokemon TCG coach. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
+  const promptImprove = `You are a Pokemon TCG competitive coach. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
+SCORE RULES (integers 0-100, be accurate for competitive play):
+- consistency: how reliably the deck sets up its strategy each game (draw power, search, recovery)
+- aggression: how fast and hard it attacks (damage output, prize race speed)  
+- difficulty: skill required to pilot optimally (1=very easy, 100=very hard)
+A top meta deck should score 75-95 in its strong areas. Be realistic, not conservative.
 {"score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":""},"weaknesses":["","",""],"improvements":{"remove":[{"card":"","qty":0,"reason":""}],"add":[{"card":"","qty":0,"reason":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
 DECK: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
 
-  const promptCreate = `You are a Pokemon TCG deck builder. Build a 60-card Standard deck. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
+  const promptCreate = `You are a Pokemon TCG competitive deck builder. Build a 60-card Standard deck. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
+SCORE RULES (integers 0-100, be accurate for competitive play):
+- consistency: how reliably the deck sets up (draw power, search, recovery)
+- aggression: how fast and hard it attacks (damage output, prize race speed)
+- difficulty: skill required to pilot optimally (1=very easy, 100=very hard)
 {"deck_name":"","score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":""},"weaknesses":["","",""],"deck_list":{"pokemon":[{"qty":0,"name":""}],"trainers":[{"qty":0,"name":""}],"energy":[{"qty":0,"name":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
 RULES: Exactly 60 cards total. Max 4 copies. SV Standard only. Include Iono x4, Ultra Ball x4, Nest Ball x4.
 REQUEST: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
