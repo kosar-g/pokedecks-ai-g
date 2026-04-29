@@ -2332,8 +2332,21 @@ async function doSearchCards(query) {
 const cardMeta = {}; // name -> { supertype, subtypes, img }
 
 function renderSearchResults(cards) {
+  const badRarities = ['Illustration Rare','Special Illustration Rare','Hyper Rare','Rare Rainbow','Rare Secret','Rare Shiny GX','Rare Shiny'];
+
+  // Filter out gold/secret art — keep only cards with number <= printedTotal
+  const filtered = cards.filter(c => {
+    const num   = parseInt(c.number);
+    const total = parseInt(c.set?.printedTotal || 9999);
+    const isBadRarity = badRarities.includes(c.rarity);
+    const isSecret = !isNaN(num) && !isNaN(total) && num > total;
+    return !isBadRarity && !isSecret;
+  });
+
+  const toShow = filtered.length ? filtered : cards;
+
   // Cache metadata
-  cards.forEach(c => {
+  toShow.forEach(c => {
     if (!cardMeta[c.name]) {
       cardMeta[c.name] = {
         supertype: c.supertype || '',
@@ -2345,7 +2358,7 @@ function renderSearchResults(cards) {
 
   const el = document.getElementById('card-search-results');
   el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px">
-    ${cards.map(c => buildSearchCardHTML(c)).join('')}
+    ${toShow.map(c => buildSearchCardHTML(c)).join('')}
   </div>`;
   refreshSearchResultsUI();
 }
@@ -2645,7 +2658,7 @@ async function fetchCardImage(name) {
 
     for (const attempt of tries) {
       const query = encodeURIComponent(`name:"${attempt}"`);
-      // Order by releaseDate ascending so oldest (normal art) comes first, then we pick best
+      // Order ascending so normal-art older prints come before special art
       const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=${query}&pageSize=30&orderBy=set.releaseDate`);
       const data = await res.json();
       if (data.data && data.data.length > 0) {
