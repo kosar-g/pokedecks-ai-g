@@ -835,16 +835,16 @@ footer {
   box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: transform 0.15s;
 }
 .card-remove-btn:hover { transform: scale(1.2); }
-/* Expand inside card — aba Cartas, hidden until hover */
-.card-expand-btn-inner {
+/* Expand inside card — aba Cartas, visible on hover */
+.card-expand-btn {
   position: absolute; bottom: 5px; right: 5px; z-index: 3;
   width: 22px; height: 22px; border-radius: 5px;
   background: rgba(0,0,0,0.6); color: #fff; border: 1px solid rgba(255,255,255,0.25);
   font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;
   opacity: 0; transition: opacity 0.15s, background 0.15s; line-height: 1;
 }
-.card-img-item:hover .card-expand-btn-inner { opacity: 1; }
-.card-expand-btn-inner:hover { background: rgba(0,0,0,0.9); }
+.card-img-item:hover .card-expand-btn { opacity: 1; }
+.card-expand-btn:hover { background: rgba(0,0,0,0.9); }
 /* Search result expand btn — bottom right, hidden until hover */
 .search-expand-btn {
   position: absolute; bottom: 5px; right: 5px; z-index: 3;
