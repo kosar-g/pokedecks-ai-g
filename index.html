@@ -1130,7 +1130,7 @@ footer {
             <button class="clear-btn" onclick="clearDeck()" id="clear-btn" style="display:none" data-pt="Limpar" data-en="Clear">Limpar</button>
           </div>
           <textarea class="deck-textarea" id="deck-input" rows="3"
-            placeholder="Cole sua lista aqui...&#10;&#10;Ex:&#10;4x Charizard ex&#10;3x Pidgeot ex&#10;4x Rare Candy&#10;3x Arven"
+            placeholder="Cole sua lista aqui...&#10;Ex:&#10;4x Charizard ex&#10;3x Pidgeot ex&#10;4x Rare Candy&#10;3x Arven"
             oninput="onDeckInput(this.value); autoGrow(this)"
             onkeydown="handleTextareaKey(event)"
             style="min-height:80px;resize:none;overflow:hidden"></textarea>
@@ -1807,16 +1807,16 @@ function updateBuilderText() {
     ba.textContent = improveText;
     if (bam) bam.textContent = improveText;
     document.getElementById('deck-input').placeholder = t(
-      'Cole sua lista aqui...\n\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy\n3x Arven',
-      'Paste your list here...\n\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy\n3x Arven'
+      'Cole sua lista aqui...\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy\n3x Arven',
+      'Paste your list here...\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy\n3x Arven'
     );
   } else {
     ti.textContent = t('✦ Descreva seu deck', '✦ Describe your deck');
     ba.textContent = createText;
     if (bam) bam.textContent = createText;
     document.getElementById('deck-input').placeholder = t(
-      'Descreva o que você quer...\n\nEx: Deck de fogo com Charizard ex.\nTenho Charmander x4. Orçamento R$100.',
-      'Describe what you want...\n\nEx: Fire deck with Charizard ex.\nBudget R$100.'
+      'Descreva o que você quer...\nEx: Deck de fogo com Charizard ex.\nTenho Charmander x4. Orçamento R$100.',
+      'Describe what you want...\nEx: Fire deck with Charizard ex.\nBudget R$100.'
     );
   }
 }
