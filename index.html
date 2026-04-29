@@ -1342,6 +1342,20 @@ footer {
                   <p class="strat-text" id="strat-mistakes"></p>
                 </div>
               </div>
+              <div class="strat-influence-row" style="display:none;align-items:flex-start;gap:8px;margin-top:10px;padding:10px 14px;background:rgba(245,196,0,0.06);border:1px solid rgba(245,196,0,0.2);border-radius:10px">
+                <span style="font-size:16px;flex-shrink:0">⚡</span>
+                <div>
+                  <p class="strat-label" style="margin-bottom:2px" data-pt="Estilo de jogo aplicado" data-en="Play style applied">Estilo de jogo aplicado</p>
+                  <p class="strat-text" id="strat-style-impact"></p>
+                </div>
+              </div>
+              <div class="strat-influence-row" style="display:none;align-items:flex-start;gap:8px;margin-top:8px;padding:10px 14px;background:rgba(96,165,250,0.06);border:1px solid rgba(96,165,250,0.2);border-radius:10px">
+                <span style="font-size:16px;flex-shrink:0">💰</span>
+                <div>
+                  <p class="strat-label" style="margin-bottom:2px" data-pt="Orçamento aplicado" data-en="Budget applied">Orçamento aplicado</p>
+                  <p class="strat-text" id="strat-budget-impact"></p>
+                </div>
+              </div>
             </div>
             <div class="section-div"></div>
             <div>
@@ -1859,7 +1873,9 @@ SCORE RULES (integers 0-100):
 - aggression: attack speed/damage. Examples: Regidrago VSTAR=95, Dragapult ex=85, Gardevoir ex=60, stall=10
 - difficulty: pilot skill needed. Examples: Gardevoir ex=88, Dragapult ex=75, Charizard ex=55, basic beatdown=20
 Score the submitted deck honestly relative to these benchmarks. Do NOT score below 50 for any meta deck.
-{"score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":""},"weaknesses":["","",""],"improvements":{"remove":[{"card":"","qty":0,"reason":""}],"add":[{"card":"","qty":0,"reason":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
+In style_impact: explain specifically how the chosen play style (${styleMap[style]}) affected your recommendations.
+In budget_impact: explain specifically what changes were made or avoided due to budget (${budgetMap[budget]}).
+{"score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":"","style_impact":"","budget_impact":""},"weaknesses":["","",""],"improvements":{"remove":[{"card":"","qty":0,"reason":""}],"add":[{"card":"","qty":0,"reason":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
 DECK: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
 
   const promptCreate = `You are a Pokemon TCG competitive deck builder. Build a 60-card Standard deck. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
@@ -1867,7 +1883,9 @@ SCORE RULES (integers 0-100):
 - consistency: setup reliability. Examples: Charizard ex=88, Dragapult ex=82, Gardevoir ex=90, budget rogue=45
 - aggression: attack speed/damage. Examples: Regidrago VSTAR=95, Dragapult ex=85, Gardevoir ex=60, stall=10
 - difficulty: pilot skill needed. Examples: Gardevoir ex=88, Dragapult ex=75, Charizard ex=55, basic beatdown=20
-{"deck_name":"","score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":""},"weaknesses":["","",""],"deck_list":{"pokemon":[{"qty":0,"name":""}],"trainers":[{"qty":0,"name":""}],"energy":[{"qty":0,"name":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
+In style_impact: explain specifically which cards were chosen to match the play style (${styleMap[style]}).
+In budget_impact: explain specifically which cards were chosen or avoided due to budget (${budgetMap[budget]}).
+{"deck_name":"","score":{"consistency":0,"aggression":0,"difficulty":0},"strategy":{"how_it_works":"","main_combo":"","common_mistakes":"","style_impact":"","budget_impact":""},"weaknesses":["","",""],"deck_list":{"pokemon":[{"qty":0,"name":""}],"trainers":[{"qty":0,"name":""}],"energy":[{"qty":0,"name":""}]},"upgrades":[{"card":"","priority":"Alta","impact":""},{"card":"","priority":"Media","impact":""},{"card":"","priority":"Baixa","impact":""}]}
 RULES: Exactly 60 cards total. Max 4 copies. SV Standard only. Include Iono x4, Ultra Ball x4, Nest Ball x4.
 REQUEST: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
 
@@ -2070,6 +2088,18 @@ function renderAnalysis(r, isCreate) {
   document.getElementById('strat-combo').textContent    = r.strategy.main_combo;
   document.getElementById('strat-mistakes').textContent = r.strategy.common_mistakes;
 
+  // Style & Budget influence
+  const styleImpactEl  = document.getElementById('strat-style-impact');
+  const budgetImpactEl = document.getElementById('strat-budget-impact');
+  if (styleImpactEl && r.strategy.style_impact) {
+    styleImpactEl.textContent = r.strategy.style_impact;
+    styleImpactEl.closest('.strat-influence-row').style.display = 'flex';
+  }
+  if (budgetImpactEl && r.strategy.budget_impact) {
+    budgetImpactEl.textContent = r.strategy.budget_impact;
+    budgetImpactEl.closest('.strat-influence-row').style.display = 'flex';
+  }
+
   // Weaknesses
   document.getElementById('weakness-list').innerHTML = r.weaknesses.map(w => `
     <div class="weakness-item">
@@ -2190,10 +2220,21 @@ function renderAnalysis(r, isCreate) {
   setResultTab('analysis');
   setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 100);
 
-  // In improve mode, load cards tab with images
+  // In improve mode, load cards tab with images from textarea
   if (!isCreate) {
     const raw = document.getElementById('deck-input').value;
     renderCardsTab(raw);
+  }
+
+  // In create mode, load cards tab with images from generated deck_list
+  if (isCreate && r.deck_list) {
+    const dl = r.deck_list;
+    const allCards = [
+      ...dl.pokemon.map(c => `${c.qty}x ${c.name}`),
+      ...dl.trainers.map(c => `${c.qty}x ${c.name}`),
+      ...dl.energy.map(c => `${c.qty}x ${c.name}`)
+    ].join('\n');
+    renderCardsTab(allCards);
   }
 }
 
