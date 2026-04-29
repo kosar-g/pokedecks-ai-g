@@ -1130,7 +1130,7 @@ footer {
             <button class="clear-btn" onclick="clearDeck()" id="clear-btn" style="display:none" data-pt="Limpar" data-en="Clear">Limpar</button>
           </div>
           <textarea class="deck-textarea" id="deck-input" rows="3"
-            placeholder="Cole sua lista de deck aqui...&#10;&#10;Ex:&#10;4x Charizard ex&#10;3x Pidgeot ex&#10;4x Rare Candy&#10;3x Arven..."
+            placeholder="Cole sua lista aqui...&#10;&#10;Ex:&#10;4x Charizard ex&#10;3x Pidgeot ex&#10;4x Rare Candy&#10;3x Arven"
             oninput="onDeckInput(this.value); autoGrow(this)"
             onkeydown="handleTextareaKey(event)"
             style="min-height:80px;resize:none;overflow:hidden"></textarea>
@@ -1807,16 +1807,16 @@ function updateBuilderText() {
     ba.textContent = improveText;
     if (bam) bam.textContent = improveText;
     document.getElementById('deck-input').placeholder = t(
-      'Cole sua lista de deck aqui...\n\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy\n3x Arven...',
-      'Paste your deck list here...\n\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy...'
+      'Cole sua lista aqui...\n\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy\n3x Arven',
+      'Paste your list here...\n\nEx:\n4x Charizard ex\n3x Pidgeot ex\n4x Rare Candy\n3x Arven'
     );
   } else {
     ti.textContent = t('✦ Descreva seu deck', '✦ Describe your deck');
     ba.textContent = createText;
     if (bam) bam.textContent = createText;
     document.getElementById('deck-input').placeholder = t(
-      'Descreva o que você quer...\n\nEx: Quero um deck agressivo de fogo com Charizard. Tenho Charmander x4 e Rare Candy x3. Orçamento de R$100.',
-      'Describe what you want...\n\nEx: I want an aggressive fire deck with Charizard. Budget R$100.'
+      'Descreva o que você quer...\n\nEx: Deck de fogo com Charizard ex.\nTenho Charmander x4. Orçamento R$100.',
+      'Describe what you want...\n\nEx: Fire deck with Charizard ex.\nBudget R$100.'
     );
   }
 }
@@ -2481,10 +2481,11 @@ function openSearchCardModal(name, img) {
 }
 
 function addCardToDeck(name, el) {
-  const meta  = cardMeta[name] || {};
-  const limit = getCardLimit(meta);
-  const cur   = getCardQtyInDeck(name);
-  const total = getTotalInDeck();
+  const meta     = cardMeta[name] || {};
+  const limit    = getCardLimit(meta);
+  const cur      = getCardQtyInDeck(name);
+  const total    = getTotalInDeck();
+  const subtypes = meta.subtypes || [];
 
   // Check limits
   if (cur >= limit.max) {
@@ -2494,6 +2495,24 @@ function addCardToDeck(name, el) {
   if (total >= 60) {
     flashBlock(el, 'Deck completo — 60 cartas');
     return;
+  }
+
+  // ACE SPEC: only 1 ACE SPEC card allowed in the entire deck (any name)
+  if (subtypes.includes('ACE SPEC')) {
+    const hasAce = Object.entries(deckState).some(([n, c]) => n !== name && c.subtypes?.includes('ACE SPEC'));
+    if (hasAce) {
+      flashBlock(el, 'ACE SPEC: apenas 1 por baralho');
+      return;
+    }
+  }
+
+  // Radiant: only 1 Radiant Pokémon allowed in the entire deck (any name)
+  if (subtypes.includes('Radiant')) {
+    const hasRadiant = Object.entries(deckState).some(([n, c]) => n !== name && c.subtypes?.includes('Radiant'));
+    if (hasRadiant) {
+      flashBlock(el, 'Radiante: apenas 1 por baralho');
+      return;
+    }
   }
 
   // Add/increment in deckState
