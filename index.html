@@ -2617,13 +2617,25 @@ function parseDeckInput(raw) {
 async function fetchCardImage(name) {
   if (cardImgCache[name] !== undefined) return cardImgCache[name];
 
-  // Rarities to avoid (gold, illustration rare, special art)
-  const badRarities = ['Illustration Rare', 'Special Illustration Rare', 'Hyper Rare', 'Rainbow Rare', 'Secret Rare'];
+  const goodRarities = ['Common','Uncommon','Rare','Rare Holo','Rare Holo EX','Rare Holo V','Rare Holo VMAX','Double Rare','Rare Ultra','Rare Holo GX','Promo'];
+  const badRarities  = ['Illustration Rare','Special Illustration Rare','Hyper Rare','Rare Rainbow','Rare Secret','Rare Shiny GX','Rare Shiny'];
+
   const preferCard = (cards) => {
-    // Prefer SV era, avoid gold/special art
-    const normal = cards.filter(c => !badRarities.includes(c.rarity));
-    const sv = normal.filter(c => c.set?.id?.startsWith('sv'));
-    return (sv[0] || normal[0] || cards[0]);
+    // Primary filter: card number must be <= set's printedTotal (removes secret/gold cards)
+    const notSecret = cards.filter(c => {
+      const num   = parseInt(c.number);
+      const total = parseInt(c.set?.printedTotal || 9999);
+      return !isNaN(num) && !isNaN(total) ? num <= total : true;
+    });
+    const pool = notSecret.length ? notSecret : cards;
+    // Among non-secret: prefer good rarities in SV era
+    const good   = pool.filter(c => goodRarities.includes(c.rarity));
+    const svGood = good.filter(c => c.set?.id?.startsWith('sv'));
+    if (svGood.length) return svGood[0];
+    if (good.length)   return good[0];
+    // Fallback: anything not explicitly bad
+    const notBad = pool.filter(c => !badRarities.includes(c.rarity));
+    return notBad[0] || pool[0];
   };
 
   try {
@@ -2633,24 +2645,25 @@ async function fetchCardImage(name) {
 
     for (const attempt of tries) {
       const query = encodeURIComponent(`name:"${attempt}"`);
-      const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=${query}&pageSize=20&orderBy=-set.releaseDate`);
+      // Order by releaseDate ascending so oldest (normal art) comes first, then we pick best
+      const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=${query}&pageSize=30&orderBy=set.releaseDate`);
       const data = await res.json();
       if (data.data && data.data.length > 0) {
         const card = preferCard(data.data);
-        cardImgCache[name] = card.images?.small || null;
+        cardImgCache[name] = card?.images?.small || null;
         return cardImgCache[name];
       }
     }
 
-    // Fallback: wildcard on first word
+    // Fallback wildcard
     const firstWord = name.split(' ')[0];
     const q2 = encodeURIComponent(`name:${firstWord}*`);
-    const res2 = await fetch(`https://api.pokemontcg.io/v2/cards?q=${q2}&pageSize=20&orderBy=-set.releaseDate`);
+    const res2 = await fetch(`https://api.pokemontcg.io/v2/cards?q=${q2}&pageSize=30&orderBy=set.releaseDate`);
     const data2 = await res2.json();
     if (data2.data && data2.data.length > 0) {
       const filtered = data2.data.filter(c => c.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
       const card = preferCard(filtered.length ? filtered : data2.data);
-      cardImgCache[name] = card.images?.small || null;
+      cardImgCache[name] = card?.images?.small || null;
       return cardImgCache[name];
     }
   } catch {}
