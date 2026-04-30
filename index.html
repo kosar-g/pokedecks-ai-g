@@ -1194,6 +1194,18 @@ footer {
 
       <!-- Right: options -->
       <div class="options-sidebar">
+        <!-- Format -->
+        <div class="option-card">
+          <p class="option-label">Formato</p>
+          <div class="budget-tabs">
+            <button class="budget-tab active" id="format-standard" onclick="setFormat('standard')">🏆 Campeonato</button>
+            <button class="budget-tab"        id="format-free"     onclick="setFormat('free')">🃏 Sem restrição</button>
+          </div>
+          <p id="format-hint" style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">
+            Apenas cartas com marcas <strong style="color:var(--text)">H, I, J</strong> e posteriores (Standard 2026)
+          </p>
+        </div>
+
         <!-- Play style -->
         <div class="option-card">
           <p class="option-label" data-pt="Estilo de jogo" data-en="Play style">Estilo de jogo</p>
@@ -1776,7 +1788,24 @@ function setIntent(i) {
   const searchPanel = document.getElementById('card-search-panel');
   if (searchPanel) searchPanel.style.display = i === 'improve' ? 'block' : 'none';
   updateBuilderText();
+  // Update budget labels based on mode
+  document.getElementById('budget-free').textContent = i === 'create' ? 'Econômico'   : 'Sem compras';
+  document.getElementById('budget-high').textContent = i === 'create' ? 'Competitivo' : 'Sem limite';
 }
+let format = 'standard'; // 'standard' | 'free'
+
+function setFormat(f) {
+  format = f;
+  document.getElementById('format-standard').classList.toggle('active', f === 'standard');
+  document.getElementById('format-free').classList.toggle('active', f === 'free');
+  const hint = document.getElementById('format-hint');
+  if (f === 'standard') {
+    hint.innerHTML = 'Apenas cartas com marcas <strong style="color:var(--text)">H, I, J</strong> e posteriores (Standard 2026)';
+  } else {
+    hint.innerHTML = '<span style="color:var(--muted)">Todas as cartas permitidas — sem restrição de regulamentação</span>';
+  }
+}
+
 function setStyle(s) {
   style = s;
   ['aggro','control','balanced'].forEach(k => {
@@ -1862,13 +1891,19 @@ async function analyzeDeck() {
   hideError();
   setAnalyzing(true);
 
+  const isCreate = intent === 'create';
   const styleMap = {aggro: t('Agressivo','Aggro'), control: t('Controle','Control'), balanced: t('Balanceado','Balanced')};
   const budgetVal = document.getElementById('budget-value').value;
-  const budgetMap = {free: t('sem compras','no purchases'), low: t(`até R$${budgetVal}`, `up to R$${budgetVal}`), high: t('sem limite','no limit')};
+  const budgetMap = isCreate
+    ? {free: t('econômico, baixo custo','budget-friendly, low cost'), low: t(`até R$${budgetVal}`  , `up to R$${budgetVal}`), high: t('sem limite, deck competitivo completo','no limit, full competitive deck')}
+    : {free: t('sem compras, use apenas cartas existentes','no purchases, use only existing cards'), low: t(`até R$${budgetVal}`, `up to R$${budgetVal}`), high: t('sem limite','no limit')};
 
-  const isCreate = intent === 'create';
+  const formatRule = format === 'standard'
+    ? 'TOURNAMENT FORMAT: Standard 2026 — only cards with regulation marks H, I, J or newer are legal. Flag any illegal cards in the improvements section.'
+    : 'FORMAT: No restriction — all cards from any era are allowed.';
 
   const promptImprove = `You are a Pokemon TCG competitive coach. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
+${formatRule}
 SCORE RULES (integers 0-100):
 - consistency: setup reliability. Examples: Charizard ex=88, Dragapult ex=82, Gardevoir ex=90, budget rogue=45
 - aggression: attack speed/damage. Examples: Regidrago VSTAR=95, Dragapult ex=85, Gardevoir ex=60, stall=10
@@ -1880,6 +1915,7 @@ In budget_impact: explain specifically what changes were made or avoided due to 
 DECK: ${deckInput} | STYLE: ${styleMap[style]} | BUDGET: ${budgetMap[budget]}`;
 
   const promptCreate = `You are a Pokemon TCG competitive deck builder. Build a 60-card Standard deck. Respond ONLY with valid JSON, no markdown, no extra text. ALL text fields must be in Brazilian Portuguese. Keep ALL string values under 60 chars.
+${formatRule}
 SCORE RULES (integers 0-100):
 - consistency: setup reliability. Examples: Charizard ex=88, Dragapult ex=82, Gardevoir ex=90, budget rogue=45
 - aggression: attack speed/damage. Examples: Regidrago VSTAR=95, Dragapult ex=85, Gardevoir ex=60, stall=10
@@ -2050,7 +2086,8 @@ function renderAnalysis(r, isCreate) {
       <span>📊</span><span>${t('Análise','Analysis')}</span>
     </button>
     ${isCreate
-      ? `<button class="result-tab" onclick="setResultTab('decklist')"><span>🃏</span><span>${t('Lista Completa','Full List')}</span></button>`
+      ? `<button class="result-tab" onclick="setResultTab('decklist')"><span>📋</span><span>${t('Lista Completa','Full List')}</span></button>
+         <button class="result-tab" onclick="setResultTab('cards')"><span>🃏</span><span>${t('Cartas','Cards')}</span></button>`
       : `<button class="result-tab" onclick="setResultTab('optimize')"><span>⚡</span><span>${t('Otimizar','Optimize')}</span></button>
          <button class="result-tab" onclick="setResultTab('cards')"><span>🃏</span><span>${t('Cartas','Cards')}</span></button>`
     }
@@ -2231,10 +2268,13 @@ function renderAnalysis(r, isCreate) {
   if (isCreate && r.deck_list) {
     const dl = r.deck_list;
     const allCards = [
-      ...dl.pokemon.map(c => `${c.qty}x ${c.name}`),
+      ...dl.pokemon.map(c  => `${c.qty}x ${c.name}`),
       ...dl.trainers.map(c => `${c.qty}x ${c.name}`),
-      ...dl.energy.map(c => `${c.qty}x ${c.name}`)
+      ...dl.energy.map(c   => `${c.qty}x ${c.name}`)
     ].join('\n');
+    // Show cards tab immediately with loading state, then populate
+    const cardsTab = document.getElementById('tab-cards');
+    if (cardsTab) cardsTab.style.display = 'block';
     renderCardsTab(allCards);
   }
 }
